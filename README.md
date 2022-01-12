@@ -1,10 +1,10 @@
 # symposium
-a very simple tcp text chat client &amp; server
+a very simple tcp text chat server compatible with netcat and telnet.
 
 ## features
 - [X] asynchronous & concurrent w/ [tokio](https://tokio.rs/)
 - [X] multi-user support
-- [X] server-side compatability with any UTF-8/TCP client
+- [X] compatability with any UTF-8/TCP client
 - [X] usernames
 
 ## usage
@@ -23,7 +23,8 @@ nc 127.0.0.1 8080
 
 ## to-do
 - [ ] custom client
+- [ ] direct messages
 - [ ] message history
-- [ ] user authentication
+- [ ] user authentication/registratoin
 - [ ] web UI
 - [ ] SSL/TLS

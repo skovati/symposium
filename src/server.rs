@@ -23,6 +23,8 @@ type Rx = mpsc::UnboundedReceiver<Message>;
 /// This is the main shared state that owned handles of are cloned and
 /// passed around to each client, so they can easily call the broadcast method below, or view
 /// all connected clients
+// TODO change this to include all clients in a vector, so we can access things like usernames for
+// prompt printing
 type ClientState = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
 
 /// State for the server
@@ -35,7 +37,7 @@ pub struct Server {
 pub struct Client {
     /// main rx & tx along TCP stream 
     lines: Framed<TcpStream, LinesCodec>,
-    /// recieve half of mpsc channel, used to recieve messages
+    /// receive half of mpsc channel, used to receive messages
     /// from other clients
     rx: Rx,
     /// connecting address of client
@@ -106,9 +108,11 @@ async fn handle_client(clients: ClientState, socket: TcpStream, addr: SocketAddr
     // main process loop
     loop {
         tokio::select! {
-            // message recieved from other client
+            // message received from other client
             Some(msg) = client.rx.recv() => client.lines.send(msg.payload.clone()).await?,
+            // message received over TCP from this client
             tx = client.lines.next() => match tx {
+                // if it's a valid line, coerce into message and broadcast
                 Some(Ok(tx)) => {
                     let msg = Message {
                         payload: format!("[{}]: {}", client.username, tx),
@@ -116,7 +120,8 @@ async fn handle_client(clients: ClientState, socket: TcpStream, addr: SocketAddr
                     };
                     broadcast(Arc::clone(&clients), msg).await;
                 },
-                Some(_) => {},
+                // otherwise, break out of loop
+                Some(_) => break,
                 None => break,
             }
         }

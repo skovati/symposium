@@ -1,10 +1,11 @@
 # symposium
-a very simple tcp text chat server compatible with netcat and telnet.
+a refreshingly simple web chat client & server.
 
 ## features
+- [X] web UI
+- [X] WebSocket support w/ [warp](https://lib.rs/crates/warp)
 - [X] asynchronous & concurrent w/ [tokio](https://tokio.rs/)
 - [X] multi-user support
-- [X] compatability with any UTF-8/TCP client
 - [X] usernames
 
 ## usage
@@ -15,16 +16,11 @@ cd symposium
 cargo run
 ```
 ### client
-```bash
-nc 127.0.0.1 8080
-> enter username: skovati
-> [skovati]: hello world!
-```
+visit http://127.0.0.1:8080
 
 ## to-do
-- [ ] custom client
 - [ ] direct messages
+- [ ] topic channels
 - [ ] message history
-- [ ] user authentication/registratoin
-- [ ] web UI
-- [ ] SSL/TLS
+- [ ] user authentication/registration
+- [ ] encrypted websockets

@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>Symposium</title>
+        <title>symposium</title>
         <link rel="stylesheet" type="text/css" href="/static/style.css">
     </head>
     <body>
-        <h1>Chatroom</h1>
-        <div class="chat" id="chat">
+        <h1>symposium</h1>
+        <div class="chatroom" style="" id="chatroom">
             <p><em>Connecting...</em></p>
         </div>
-        <div class="chat-box">
-            <input type="text" id="text" />
-            <button type="button" id="send">Send</button>
+        <div class="input-box">
+            <input type="text" id="message-input" onkeypress="keyPressed(event)"/>
+            <button type="button" onclick="sendMessage()" id="message-send">Send</button>
         </div>
         <script type="text/javascript" src="/static/app.js"> </script>
     </body>

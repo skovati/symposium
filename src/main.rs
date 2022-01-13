@@ -57,6 +57,16 @@ impl SharedState {
     async fn disconnect_user(&self, name: String) {
         eprintln!("good bye user: {}", name);
 
+
+        let msg: String;
+        {
+            let mut connected = self.connected.lock().await;
+            *connected -= 1;
+            msg = format!("{} just left the room. There are now {} user(s) connected.", name, *connected);
+        }
+
+        self.broadcast("SERVER".to_string(), Message::text(msg)).await;
+
         // Stream closed up, so remove from the user list
         self.users.lock().await.remove(&name);
     }
@@ -104,7 +114,14 @@ async fn handle_user(ws: WebSocket, state: SharedState) {
     ws_tx.send(Message::text("Welcome, enter a username below to get started!")).await.unwrap();
     if let Some(response) = ws_rx.next().await {
         username = match response {
-            Ok(name) => name.to_str().unwrap_or("anon").to_string(),
+            Ok(name) => {
+                let name = name.to_str().unwrap_or("anon").to_string();
+                if name.len() == 0 {
+                    "anon".to_string()
+                } else {
+                    name
+                }
+            }
             Err(e) => {
                 eprintln!("websocket error(id={}): {}", id, e);
                 return
@@ -133,7 +150,7 @@ async fn handle_user(ws: WebSocket, state: SharedState) {
         state.users.lock().await.insert(user.name.clone(), tx);
     }
 
-    state.broadcast("ANOUNCE".to_string(), Message::text(msg)).await;
+    state.broadcast("SERVER".to_string(), Message::text(msg)).await;
 
     println!("new user connected: {:?}", user);
 

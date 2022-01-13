@@ -1,0 +1,24 @@
+h1 {
+    margin: 0;
+    padding: 20px 0;
+    color: #00539F;
+    text-shadow: 3px 3px 1px black;
+    text-align: center;
+}
+
+.chat {
+    text-align: center;
+}
+
+.chat-box {
+    text-align: center;
+    /* margin: 0 auto; */
+}
+
+p {
+    text-align: center;
+}
+
+body {
+    background-color: #a1a1a1;
+}

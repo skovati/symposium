@@ -1,11 +1,13 @@
-const chat = document.getElementById('chatroom');
-const input = document.getElementById('message-input');
-const send = document.getElementById('message-send');
-const uri = 'ws://' + location.host + '/ws';
+const chat = document.getElementById("chatroom");
+const chatroom = document.getElementById("chatroom-div");
+const header = document.getElementById("status-header")
+const input = document.getElementById("message-input");
+const send = document.getElementById("message-send");
+const uri = "ws://" + location.host + "/ws";
 const ws = new WebSocket(uri);
 
 function message(data) {
-    const line = document.createElement('p');
+    const line = document.createElement("li");
     line.innerText = data;
     chat.appendChild(line);
 }
@@ -20,12 +22,12 @@ function keyPressed(event) {
 function sendMessage() {
     const msg = input.value;
     ws.send(msg);
-    input.value = '';
-    chat.scrollTop = chat.scrollHeight;
+    input.value = "";
+    chatroom.scrollTop = chatroom.scrollHeight;
 };
 
 ws.onopen = function() {
-    chat.innerHTML = '<p><em>Connected to the Symposium Network!</em></p>';
+    header.innerHTML = "<h2><em>Connected to the Symposium Network!</em></h2>";
 };
 
 ws.onmessage = function(msg) {
@@ -33,6 +35,6 @@ ws.onmessage = function(msg) {
 };
 
 ws.onclose = function() {
-    chat.getElementsByTagName('em')[0].innerText = 'Disconnected!';
+    header.innerHTML = "<h2><em>Disconnected.</em></h2>";
 };
 

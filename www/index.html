@@ -6,12 +6,19 @@
     </head>
     <body>
         <h1>symposium</h1>
-        <div class="chatroom" style="" id="chatroom">
-            <p><em>Connecting...</em></p>
+        <div id="status-header">
+            <h2><em>Connecting...</em></h2>
         </div>
-        <div class="input-box">
-            <input type="text" id="message-input" onkeypress="keyPressed(event)"/>
-            <button type="button" onclick="sendMessage()" id="message-send">Send</button>
+        <div id="body-div">
+            <div id="chatroom-div">
+                <ul id="chatroom"></ul>
+            </div>
+            <div id=message-form>
+                <input type="text" placeholder="message..." id="message-input" onkeypress="keyPressed(event)"/>
+                <span>
+                <button type="button" onclick="sendMessage()" id="message-send">send</button>
+                </span>
+            </div>
         </div>
         <script type="text/javascript" src="/static/app.js"> </script>
     </body>

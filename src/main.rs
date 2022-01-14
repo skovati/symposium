@@ -54,6 +54,27 @@ impl SharedState {
         }
     }
 
+    async fn target_message(&self, name: String, msg: Message) {
+        // Skip any non-Text messages...
+        let msg = if let Ok(s) = msg.to_str() {
+            s
+        } else {
+            return;
+        };
+
+        let now = chrono::offset::Local::now();
+        let new_msg = format!("[{}] {}: {}", now.format("%I:%M"), name, msg);
+
+        // message just the passed user
+        let tx: &Tx;
+        {
+            tx = self.users.lock().await.get(&name);
+        }
+        if let Err(_disconnected) = tx.send(Message::text(new_msg.clone())) {
+            // tx disconnected, so disconnect_user will run in the other task
+        }
+    }
+
     async fn disconnect_user(&self, name: String) {
         eprintln!("good bye user: {}", name);
 
@@ -164,7 +185,7 @@ async fn handle_user(ws: WebSocket, state: SharedState) {
                 .unwrap_or_else(|e| {
                     eprintln!("websocket send error: {}", e);
                 })
-                .await;
+            .await;
         }
     });
 

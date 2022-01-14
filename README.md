@@ -3,7 +3,7 @@ a refreshingly simple web chat client & server.
 
 ## features
 - [X] web UI
-- [X] WebSocket support w/ [warp](https://lib.rs/crates/warp)
+- [X] encrypted WebSocket support w/ [warp](https://lib.rs/crates/warp)
 - [X] asynchronous & concurrent w/ [tokio](https://tokio.rs/)
 - [X] multi-user support
 - [X] usernames
@@ -23,4 +23,3 @@ visit http://127.0.0.1:8080
 - [ ] topic channels
 - [ ] message history
 - [ ] user authentication/registration
-- [ ] encrypted websockets

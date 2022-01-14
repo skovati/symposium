@@ -1,6 +1,8 @@
 # symposium
 a refreshingly simple web chat client & server.
 
+![screenshot](https://user-images.githubusercontent.com/49844593/149445309-c93e3d8a-1e01-4129-b59a-5e23c5effbae.png)
+
 ## features
 - [X] web UI
 - [X] encrypted WebSocket support w/ [warp](https://lib.rs/crates/warp)

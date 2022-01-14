@@ -54,7 +54,7 @@ impl SharedState {
         }
     }
 
-    async fn target_message(&self, name: String, msg: Message) {
+    async fn target_message(&self, to: String, from: String, msg: Message) {
         // Skip any non-Text messages...
         let msg = if let Ok(s) = msg.to_str() {
             s
@@ -63,15 +63,15 @@ impl SharedState {
         };
 
         let now = chrono::offset::Local::now();
-        let new_msg = format!("[{}] {}: {}", now.format("%I:%M"), name, msg);
+        let new_msg = format!("[{}] {}: {}", now.format("%I:%M"), from, msg);
 
         // message just the passed user
-        let tx: &Tx;
         {
-            tx = self.users.lock().await.get(&name);
-        }
-        if let Err(_disconnected) = tx.send(Message::text(new_msg.clone())) {
-            // tx disconnected, so disconnect_user will run in the other task
+            let users = self.users.lock().await;
+            let tx = users.get(&to).unwrap();
+            if let Err(_disconnected) = tx.send(Message::text(new_msg.clone())) {
+                // tx disconnected, so disconnect_user will run in the other task
+            }
         }
     }
 
@@ -117,7 +117,7 @@ async fn main() {
 
     let routes = index.or(stat).or(chat);
 
-    warp::serve(routes).run(([127, 0, 0, 1], 8080)).await;
+    warp::serve(routes).run(([0, 0, 0, 0], 8080)).await;
 }
 
 async fn handle_user(ws: WebSocket, state: SharedState) {
@@ -151,8 +151,6 @@ async fn handle_user(ws: WebSocket, state: SharedState) {
     } else {
         return
     }
-    println!("GOT HERE FOR {}", username);
-
 
     let user = User {
         name: username.clone(),

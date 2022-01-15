@@ -7,7 +7,7 @@ use tokio::sync::{mpsc, Mutex};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
 use warp::Filter;
-use chrono;
+use serde_json;
 
 // custom crates
 use crate::user::*;
@@ -58,16 +58,9 @@ impl Router {
         warp::serve(routes).run(self.addr).await;
     }
 
-    async fn broadcast(&self, name: String, msg: Message) {
-        // Skip any non-Text messages...
-        let msg = if let Ok(s) = msg.to_str() {
-            s
-        } else {
-            return;
-        };
-
-        let now = chrono::offset::Local::now();
-        let new_msg = format!("[{}] {}: {}", now.format("%I:%M"), name, msg);
+    async fn broadcast(&self, msg: &String, from: &User) {
+        let parcel = Parcel::new(&msg, &from);
+        let new_msg = serde_json::to_string(&parcel).unwrap();
 
         // New message from this user, send it to everyone else (except same uid)...
         for (_, tx) in self.users.lock().await.iter() {
@@ -76,6 +69,18 @@ impl Router {
             }
         }
     }
+
+    // async fn target_msg(&self, msg: &String, to: &User) {
+    //     let parcel = Parcel::new(&msg, &self.admin);
+    //     let new_msg = serde_json::to_string(&parcel).unwrap();
+    //
+    //     // New message from this user, send it to everyone else (except same uid)...
+    //     for (_, tx) in self.users.lock().await.iter() {
+    //         if let Err(_disconnected) = tx.send(Message::text(new_msg.clone())) {
+    //             // tx disconnected, so disconnect_user will run in the other task
+    //         }
+    //     }
+    // }
 
     async fn disconnect_user(&self, name: String) {
         println!("disconnected user: {}", name);
@@ -87,7 +92,7 @@ impl Router {
             msg = format!("{} just left the room. There are now {} user(s) connected.", name, *connected);
         }
 
-        self.broadcast("SERVER".to_string(), Message::text(msg)).await;
+        self.broadcast(&msg, &self.admin).await;
 
         // Stream closed up, so remove from the user list
         self.users.lock().await.remove(&name);
@@ -103,8 +108,9 @@ impl Router {
 
         // get username
         let username: String;
-        let parcel = Parcel::new("Welcome, enter a username below to get started!".to_string(), self.admin.clone());
-        ws_tx.send(Message::text(parcel)).await.unwrap();
+        let parcel = Parcel::new(&"Welcome, enter a username below to get started!".to_string(), &self.admin);
+        let parcel_json = serde_json::to_string(&parcel).unwrap();
+        ws_tx.send(Message::text(parcel_json)).await.unwrap();
         if let Some(response) = ws_rx.next().await {
             username = match response {
                 Ok(name) => {
@@ -138,7 +144,8 @@ impl Router {
             self.users.lock().await.insert(user.name.clone(), tx);
         }
 
-        self.broadcast("SERVER".to_string(), Message::text(msg)).await;
+        self.broadcast(&msg, &self.admin).await;
+
 
         println!("new user connected: {:?}", user);
 
@@ -166,7 +173,12 @@ impl Router {
                     break;
                 }
             };
-            self.broadcast(user.name.clone(), msg).await;
+            let str: String = if msg.is_text() {
+                msg.to_str().unwrap().to_string()
+            } else {
+                "error".to_string()
+            };
+            self.broadcast(&str, &user).await;
         }
 
         // the while loop will continue as long as the websocket is open

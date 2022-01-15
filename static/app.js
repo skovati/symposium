@@ -31,7 +31,8 @@ ws.onopen = function() {
 };
 
 ws.onmessage = function(msg) {
-    message(msg.data);
+    var parcel = JSON.parse(msg.data);
+    message(parcel.payload);
 };
 
 ws.onclose = function() {

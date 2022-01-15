@@ -2,7 +2,7 @@ use chrono::Local;
 use serde::{Serialize, Deserialize};
 use crate::user::User;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Parcel {
     payload: String,
     from: User,
@@ -10,10 +10,10 @@ pub struct Parcel {
 }
 
 impl Parcel {
-    pub fn new(payload: String, from: User) -> Self {
+    pub fn new(payload: &String, from: &User) -> Self {
         Parcel {
-            payload,
-            from,
+            payload: payload.clone(),
+            from: from.clone(),
             postmark: Local::now().format("%I:%M").to_string(),
         }
     }

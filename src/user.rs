@@ -1,20 +1,19 @@
 // use serde::{Serialize, Deserialize};
 use warp::ws::Message;
+use serde::{Serialize, Deserialize};
 use tokio::sync::mpsc;
 
 pub type Tx = mpsc::UnboundedSender<Message>;
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
     pub name: String,
-    pub tx: Tx,
 }
 
 impl User {
-    pub fn new(name: &String, tx: Tx) -> Self {
+    pub fn new(name: &String) -> Self {
         User {
             name: name.clone(),
-            tx,
         }
     }
 }

@@ -11,6 +11,7 @@ use chrono;
 
 // custom crates
 use crate::user::*;
+use crate::parcel::Parcel;
 
 /// this is the mutable state passed around by thread actors
 /// the HashMap enclosed is wrapped in a Mutex and Atomic ref count in order
@@ -20,6 +21,7 @@ pub struct Router {
     users: Arc<Mutex<HashMap<String, Tx>>>,
     addr: SocketAddr,
     connected: Arc<Mutex<usize>>,
+    admin: User,
 }
 
 impl Router {
@@ -28,6 +30,9 @@ impl Router {
             users: Arc::new(Mutex::new(HashMap::new())),
             addr,
             connected: Arc::new(Mutex::new(0)),
+            admin: User {
+                name: "server".to_string(),
+            }
         }
     }
 
@@ -40,9 +45,9 @@ impl Router {
             // The `ws()` filter will prepare Websocket handshake...
             .and(warp::ws())
             .and(router)
-            .map(|ws: warp::ws::Ws, router| {
+            .map(|ws: warp::ws::Ws, router: Router| {
                 // This will call our function if the handshake succeeds.
-                ws.on_upgrade(move |socket| handle_user(socket, router))
+                ws.on_upgrade(move |socket| router.handle_user(socket))
             });
 
         // GET / -> serves static index.html, app.js
@@ -88,84 +93,84 @@ impl Router {
         self.users.lock().await.remove(&name);
     }
 
-}
+    async fn handle_user(self, ws: WebSocket) {
+        // split into tx and rx halves of the websocket
+        let (mut ws_tx, mut ws_rx) = ws.split();
 
-pub async fn handle_user(ws: WebSocket, state: Router) {
-    // split into tx and rx halves of the websocket
-    let (mut ws_tx, mut ws_rx) = ws.split();
+        // unbounded channel handles buffering and flushing
+        let (tx, rx) = mpsc::unbounded_channel();
+        let mut rx = UnboundedReceiverStream::new(rx);
 
-    // unbounded channel handles buffering and flushing
-    let (tx, rx) = mpsc::unbounded_channel();
-    let mut rx = UnboundedReceiverStream::new(rx);
-
-    // get username
-    let username: String;
-    ws_tx.send(Message::text("Welcome, enter a username below to get started!")).await.unwrap();
-    if let Some(response) = ws_rx.next().await {
-        username = match response {
-            Ok(name) => {
-                let name = name.to_str().unwrap_or("anon").to_string();
-                if name.len() == 0 {
-                    "anon".to_string()
-                } else {
-                    name
+        // get username
+        let username: String;
+        let parcel = Parcel::new("Welcome, enter a username below to get started!".to_string(), self.admin.clone());
+        ws_tx.send(Message::text(parcel)).await.unwrap();
+        if let Some(response) = ws_rx.next().await {
+            username = match response {
+                Ok(name) => {
+                    let name = name.to_str().unwrap_or("anon").to_string();
+                    if name.len() == 0 {
+                        "anon".to_string()
+                    } else {
+                        name
+                    }
                 }
-            }
-            Err(e) => {
-                eprintln!("websocket error: {}", e);
-                return
-            }
-        };
-    } else {
-        return
-    }
-
-    let user = User::new(&username, tx.clone());
-
-    let msg: String;
-    {
-        let mut connected = state.connected.lock().await;
-        *connected += 1;
-        msg = format!("{} just joined the room! There are now {} user(s) connected.", user.name, *connected);
-    }
-
-    {
-        // register this user in the server state
-        state.users.lock().await.insert(user.name.clone(), tx);
-    }
-
-    state.broadcast("SERVER".to_string(), Message::text(msg)).await;
-
-    println!("new user connected: {:?}", user);
-
-    // spawn a task to handle writing messages to the websocket that
-    // are received from other users on the mpsc
-    tokio::task::spawn(async move {
-        while let Some(message) = rx.next().await {
-            println!("RECEIVED {:?}", message);
-            ws_tx
-                .send(message)
-                .unwrap_or_else(|e| {
-                    eprintln!("websocket send error: {}", e);
-                })
-            .await;
+                Err(e) => {
+                    eprintln!("websocket error: {}", e);
+                    return
+                }
+            };
+        } else {
+            return
         }
-    });
 
-    // when we recieve text on the websocket from the frontend,
-    // broadcast it to all connected users on the mpsc
-    while let Some(result) = ws_rx.next().await {
-        let msg = match result {
-            Ok(msg) => msg,
-            Err(e) => {
-                eprintln!("websocket error(id={}): {}", user.name, e);
-                break;
+        let user = User::new(&username);
+
+        let msg: String;
+        {
+            let mut connected = self.connected.lock().await;
+            *connected += 1;
+            msg = format!("{} just joined the room! There are now {} user(s) connected.", user.name, *connected);
+        }
+
+        {
+            // register this user in the server state
+            self.users.lock().await.insert(user.name.clone(), tx);
+        }
+
+        self.broadcast("SERVER".to_string(), Message::text(msg)).await;
+
+        println!("new user connected: {:?}", user);
+
+        // spawn a task to handle writing messages to the websocket that
+        // are received from other users on the mpsc
+        tokio::task::spawn(async move {
+            while let Some(message) = rx.next().await {
+                println!("RECEIVED {:?}", message);
+                ws_tx
+                    .send(message)
+                    .unwrap_or_else(|e| {
+                        eprintln!("websocket send error: {}", e);
+                    })
+                .await;
             }
-        };
-        state.broadcast(user.name.clone(), msg).await;
-    }
+        });
 
-    // the while loop will continue as long as the websocket is open
-    // when it closes, we finally reach this disconnect function call
-    state.disconnect_user(user.name).await;
+        // when we recieve text on the websocket from the frontend,
+        // broadcast it to all connected users on the mpsc
+        while let Some(result) = ws_rx.next().await {
+            let msg = match result {
+                Ok(msg) => msg,
+                Err(e) => {
+                    eprintln!("websocket error(id={}): {}", user.name, e);
+                    break;
+                }
+            };
+            self.broadcast(user.name.clone(), msg).await;
+        }
+
+        // the while loop will continue as long as the websocket is open
+        // when it closes, we finally reach this disconnect function call
+        self.disconnect_user(user.name).await;
+    }
 }

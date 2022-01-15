@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 
 mod user;
 mod router;
+mod parcel;
 use router::*;
 
 #[tokio::main]

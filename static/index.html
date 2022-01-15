@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>symposium</title>
+        <link rel="stylesheet" type="text/css" href="/style.css">
+    </head>
+    <body>
+        <h1>symposium</h1>
+        <div id="status-header">
+            <h2><em>Enter a username to login!</em></h2>
+        </div>
+        <div id="body-div">
+            <div id="chatroom-div">
+                <ul id="chatroom"></ul>
+            </div>
+            <div id=message-form>
+                <input type="text" placeholder="message..." id="message-input" onkeypress="keyPressed(event)"/>
+                <span>
+                <button type="button" onclick="sendMessage()" id="message-send">send</button>
+                </span>
+            </div>
+        </div>
+        <script type="text/javascript" src="/app.js"> </script>
+    </body>
+</html>

@@ -6,7 +6,10 @@ use futures_util::{SinkExt, StreamExt, TryFutureExt};
 use tokio::sync::{mpsc, Mutex};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::ws::{Message, WebSocket};
-use warp::Filter;
+use warp::{Filter, reject};
+use warp::{reply, Reply};
+use warp::{Rejection, http::StatusCode};
+use sha2::{Sha256, Digest};
 use serde_json;
 
 // custom crates
@@ -19,19 +22,27 @@ use crate::parcel::Parcel;
 #[derive(Clone)]
 pub struct Router {
     users: Arc<Mutex<HashMap<String, Tx>>>,
+    ids: Arc<Mutex<HashMap<String, String>>>,
     addr: SocketAddr,
     connected: Arc<Mutex<usize>>,
     admin: User,
 }
 
+#[derive(Debug)]
+struct InvalidUsername;
+
+impl reject::Reject for InvalidUsername {}
+
 impl Router {
     pub fn new(addr: SocketAddr) -> Self {
         Router {
             users: Arc::new(Mutex::new(HashMap::new())),
+            ids: Arc::new(Mutex::new(HashMap::new())),
             addr,
             connected: Arc::new(Mutex::new(0)),
             admin: User {
                 name: "server".to_string(),
+                id: "".to_string(),
             }
         }
     }
@@ -39,6 +50,37 @@ impl Router {
     pub async fn run(&self) {
         let router = self.clone();
         let router = warp::any().map(move || router.clone());
+
+
+        // GET / -> serves login.html
+        let root = warp::path::end()
+            .and(warp::get())
+            .and(warp::fs::file("static/login.html"));
+
+        // GET / -> serves static CSS and JS
+        let files = warp::get()
+            .and(warp::fs::dir("static"));
+
+        let register = warp::path("register")
+            .and(warp::body::content_length_limit(1024 * 16))
+            .and(warp::body::json::<User>())
+            .and(router.clone())
+            .and_then(|user: User, router: Router| async move {
+                // let users = router.users.lock().await;
+                let mut ids = router.ids.lock().await;
+                if !ids.contains_key(&user.name) {
+                    let hash = format!("{:x}", Sha256::new()
+                        .chain_update(user.name.clone())
+                        .finalize());
+                    ids.insert(user.name.clone(), hash.clone());
+                    Ok(warp::reply::json( &User {
+                        name: user.name.clone(),
+                        id: hash,
+                    }))
+                } else {
+                    Err(warp::reject::custom(InvalidUsername))
+                }
+            });
 
         // GET /ws -> websocket upgrade
         let chat = warp::path("ws")
@@ -50,10 +92,11 @@ impl Router {
                 ws.on_upgrade(move |socket| router.handle_user(socket))
             });
 
-        // GET / -> serves static index.html, app.js
-        let files = warp::fs::dir("static");
+        let routes = root   // serve login.html
+            .or(files)      // or server static css and js
+            .or(register)   // or respond to register api
+            .or(chat);      // or open authenticated websocket connection
 
-        let routes = files.or(chat);
         println!("server started at: {}", self.addr);
         warp::serve(routes).run(self.addr).await;
     }
@@ -69,18 +112,6 @@ impl Router {
             }
         }
     }
-
-    // async fn target_msg(&self, msg: &String, to: &User) {
-    //     let parcel = Parcel::new(&msg, &self.admin);
-    //     let new_msg = serde_json::to_string(&parcel).unwrap();
-    //
-    //     // New message from this user, send it to everyone else (except same uid)...
-    //     for (_, tx) in self.users.lock().await.iter() {
-    //         if let Err(_disconnected) = tx.send(Message::text(new_msg.clone())) {
-    //             // tx disconnected, so disconnect_user will run in the other task
-    //         }
-    //     }
-    // }
 
     async fn disconnect_user(&self, name: String) {
         println!("disconnected user: {}", name);
@@ -184,5 +215,16 @@ impl Router {
         // the while loop will continue as long as the websocket is open
         // when it closes, we finally reach this disconnect function call
         self.disconnect_user(user.name).await;
+    }
+}
+
+pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, std::convert::Infallible> {
+    if err.is_not_found() {
+        Ok(reply::with_status("NOT_FOUND", StatusCode::NOT_FOUND))
+    } else if let Some(e) = err.find::<InvalidUsername>() {
+        Ok(reply::with_status("CONFLICT", StatusCode::CONFLICT))
+    } else {
+        eprintln!("unhandled rejection: {:?}", err);
+        Ok(reply::with_status("INTERNAL_SERVER_ERROR", StatusCode::INTERNAL_SERVER_ERROR))
     }
 }

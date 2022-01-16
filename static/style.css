@@ -15,7 +15,7 @@ h1 {
     padding: 2%;
 }
 
-#body-div {
+.body-div {
     position: absolute;
     /* top:0; */
     /* bottom: 0; */
@@ -29,7 +29,7 @@ h1 {
     border: 4px solid firebrick;
 }
 
-#chatroom-div {
+.chatroom-div {
     overflow-y: auto;
     overflow-x: hidden;
     height: 90%;
@@ -50,13 +50,13 @@ ul li {
     border-bottom: 2px solid indianred;
 }
 
-#status-header {
+.status-header {
     font-size: 100%;
     text-align: center;
     padding-bottom: 1%;
 }
 
-#message-form {
+.message-form {
     width: 100%;
     height: 10%;
     box-sizing: border-box;
@@ -66,7 +66,7 @@ ul li {
     /* margin-right: auto; */
 }
 
-#message-input {
+.input-text {
     height: 100%;
     border: none;
     background-color: blanchedalmond;
@@ -76,7 +76,7 @@ ul li {
     outline: none;
 }
 
-#message-send {
+.input-button {
     background-color: firebrick;
     border: none;
     border-radius: 0px;
@@ -90,7 +90,7 @@ ul li {
     transition-duration: 0.2s;
 }
 
-#message-send:hover {
+.input-button:hover {
     background-color: indianred;
     color: white;
 }

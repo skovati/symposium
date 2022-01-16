@@ -1,10 +1,7 @@
 use std::env;
 use std::net::SocketAddr;
 
-mod user;
-mod router;
-mod parcel;
-use router::*;
+use symposium::router::*;
 
 #[tokio::main]
 async fn main() {

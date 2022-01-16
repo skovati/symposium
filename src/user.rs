@@ -8,12 +8,14 @@ pub type Tx = mpsc::UnboundedSender<Message>;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
     pub name: String,
+    pub id: String,
 }
 
 impl User {
     pub fn new(name: &String) -> Self {
         User {
             name: name.clone(),
+            id: "".to_string(),
         }
     }
 }

@@ -1,25 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
+        <meta charset="UTF-8">
         <title>symposium</title>
-        <link rel="stylesheet" type="text/css" href="/static/style.css">
+        <link rel="stylesheet" type="text/css" href="style.css">
     </head>
     <body>
         <h1>symposium</h1>
-        <div id="status-header">
+        <div class="status-header" id="status-header">
             <h2><em>Connecting...</em></h2>
         </div>
-        <div id="body-div">
-            <div id="chatroom-div">
+        <div class="body-div">
+            <div class="chatroom-div" id="chatroom-div">
                 <ul id="chatroom"></ul>
             </div>
-            <div id=message-form>
-                <input type="text" placeholder="message..." id="message-input" onkeypress="keyPressed(event)"/>
+            <div class=message-form>
+                <input type="text" placeholder="message..." class="input-text" id="message-input" onkeypress="keyPressed(event)"/>
                 <span>
-                <button type="button" onclick="sendMessage()" id="message-send">send</button>
+                    <button type="button" class="input-button" onclick="sendMessage()" id="message-button">send</button>
                 </span>
             </div>
         </div>
-        <script type="text/javascript" src="/static/app.js"> </script>
+        <script type="text/javascript" src="app.js"> </script>
     </body>
 </html>

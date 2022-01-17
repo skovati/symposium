@@ -57,6 +57,11 @@ impl Router {
             .and(warp::get())
             .and(warp::fs::file("static/login.html"));
 
+        // GET / -> serves login.html
+        let chat = warp::path("chat")
+            .and(warp::get())
+            .and(warp::fs::file("static/chat.html"));
+
         // GET / -> serves static CSS and JS
         let files = warp::get()
             .and(warp::fs::dir("static"));
@@ -83,7 +88,7 @@ impl Router {
             });
 
         // GET /ws -> websocket upgrade
-        let chat = warp::path("ws")
+        let ws = warp::path("ws")
             // The `ws()` filter will prepare Websocket handshake...
             .and(warp::ws())
             .and(router)
@@ -93,9 +98,10 @@ impl Router {
             });
 
         let routes = root   // serve login.html
+            .or(chat)       // or chat.html
             .or(files)      // or server static css and js
             .or(register)   // or respond to register api
-            .or(chat);      // or open authenticated websocket connection
+            .or(ws);        // or open authenticated websocket connection
 
         println!("server started at: {}", self.addr);
         warp::serve(routes).run(self.addr).await;

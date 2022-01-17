@@ -8,10 +8,13 @@ async function checkUsername() {
     }
     const response = await postUserForm(url, data);
     if(response.ok) {
-        msg.innerHTML = "<h2><em>Enter a username!</em></h2>";
-        console.log(await response.text());
+        msg.innerHTML = "<h2><em>Forwarding to chat page!</em></h2>";
+        const user = await response.json();
+        sessionStorage.setItem("name", user.name);
+        sessionStorage.setItem("id", user.id);
+        window.location.replace("chat");
     } else {
-        console.log("invalid username");
+        msg.innerHTML = "<h2><em>Sorry that username is taken, try again</em></h2>";
         return;
     }
 }

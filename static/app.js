@@ -6,24 +6,6 @@ const send = document.getElementById("message-button");
 const uri = "ws://" + location.host + "/ws";
 const ws = new WebSocket(uri);
 
-function checkUsername() {
-    console.log("test");
-    postUserForm();
-}
-
-async function postUserForm() {
-    const msg = document.getElementById("login-header");
-    const username = document.getElementById("username-input").value;
-    const requestOptions = {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username })
-    };
-    fetch("http://127.0.0.1:8080/register", requestOptions)
-        .then(response => response.json())
-        .then(data => msg.innerHTML = data );
-}
-
 function message(data) {
     const line = document.createElement("li");
     line.innerText = data;

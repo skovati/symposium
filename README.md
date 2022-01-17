@@ -8,7 +8,8 @@ a refreshingly simple web chat client & server.
 - [X] encrypted WebSocket support w/ [warp](https://lib.rs/crates/warp)
 - [X] asynchronous & concurrent w/ [tokio](https://tokio.rs/)
 - [X] multi-user support
-- [X] usernames
+- [X] user authentication & authorization
+- [X] login page
 
 ## usage
 ### server
@@ -24,5 +25,4 @@ visit http://127.0.0.1:8080
 - [ ] direct messages
 - [ ] topic channels
 - [ ] message history
-- [ ] user authentication/registration
-- [ ] login page
+- [ ] commands (eg /list /join)

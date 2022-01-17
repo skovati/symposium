@@ -129,7 +129,11 @@ impl Router {
             .or(ws);        // or open authenticated websocket connection
 
         println!("server started at: {}", self.addr);
-        warp::serve(routes).run(self.addr).await;
+        warp::serve(routes)
+            .tls()
+            .cert_path("test_tls/cert.pem")
+            .key_path("test_tls/key.rsa")
+            .run(self.addr).await;
     }
 
     async fn broadcast(&self, msg: &String, from: &User) {

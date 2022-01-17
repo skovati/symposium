@@ -11,6 +11,7 @@ use warp::{reply, Reply};
 use warp::{Rejection, http::StatusCode};
 use sha2::{Sha256, Digest};
 use serde_json;
+use rand::{distributions::Alphanumeric, Rng};
 
 // custom crates
 use crate::user::*;
@@ -26,6 +27,7 @@ pub struct Router {
     addr: SocketAddr,
     connected: Arc<Mutex<usize>>,
     admin: User,
+    instance_key: String,
 }
 
 #[derive(Debug)]
@@ -33,9 +35,14 @@ struct InvalidUsername;
 
 impl reject::Reject for InvalidUsername {}
 
+#[derive(Debug)]
+struct Unauthorized;
+
+impl reject::Reject for Unauthorized {}
+
 impl Router {
-    pub fn new(addr: SocketAddr) -> Self {
-        Router {
+    pub async fn new(addr: SocketAddr) -> Self {
+        let router = Router {
             users: Arc::new(Mutex::new(HashMap::new())),
             ids: Arc::new(Mutex::new(HashMap::new())),
             addr,
@@ -43,14 +50,20 @@ impl Router {
             admin: User {
                 name: "server".to_string(),
                 id: "".to_string(),
-            }
-        }
+            },
+            instance_key: rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(8)
+                .map(char::from)
+                .collect(),
+        };
+        router.ids.lock().await.insert("admin".to_string(), "admin".to_string());
+        router
     }
 
     pub async fn run(&self) {
         let router = self.clone();
         let router = warp::any().map(move || router.clone());
-
 
         // GET / -> serves login.html
         let root = warp::path::end()
@@ -71,12 +84,12 @@ impl Router {
             .and(warp::body::json::<User>())
             .and(router.clone())
             .and_then(|user: User, router: Router| async move {
-                // let users = router.users.lock().await;
                 let mut ids = router.ids.lock().await;
-                if !ids.contains_key(&user.name) {
+                if user.name.len() > 0 && !ids.contains_key(&user.name) {
                     let hash = format!("{:x}", Sha256::new()
-                        .chain_update(user.name.clone())
-                        .finalize());
+                                       .chain_update(user.name.clone())
+                                       .chain_update(router.instance_key)
+                                       .finalize());
                     ids.insert(user.name.clone(), hash.clone());
                     Ok(warp::reply::json( &User {
                         name: user.name.clone(),
@@ -89,12 +102,24 @@ impl Router {
 
         // GET /ws -> websocket upgrade
         let ws = warp::path("ws")
-            // The `ws()` filter will prepare Websocket handshake...
-            .and(warp::ws())
+            .and(warp::query())
+            .and(router.clone())
+            .and_then(|user: User, router: Router| async move {
+                let ids = router.ids.lock().await;
+                if ids.contains_key(&user.name) && *ids.get(&user.name).unwrap() == user.id {
+                    println!("OKAY AUTH: {:?}", user);
+                    Ok(user)
+                } else {
+                    println!("BAD AUTH");
+                    Err(reject::custom(Unauthorized))
+                }
+            })
+        // The `ws()` filter will prepare Websocket handshake...
+        .and(warp::ws())
             .and(router)
-            .map(|ws: warp::ws::Ws, router: Router| {
+            .map(|user: User, ws: warp::ws::Ws, router: Router| {
                 // This will call our function if the handshake succeeds.
-                ws.on_upgrade(move |socket| router.handle_user(socket))
+                ws.on_upgrade(move |socket| router.handle_user(socket, user))
             });
 
         let routes = root   // serve login.html
@@ -135,7 +160,7 @@ impl Router {
         self.users.lock().await.remove(&name);
     }
 
-    async fn handle_user(self, ws: WebSocket) {
+    async fn handle_user(self, ws: WebSocket, user: User) {
         // split into tx and rx halves of the websocket
         let (mut ws_tx, mut ws_rx) = ws.split();
 
@@ -143,31 +168,6 @@ impl Router {
         let (tx, rx) = mpsc::unbounded_channel();
         let mut rx = UnboundedReceiverStream::new(rx);
 
-        // get username
-        let username: String;
-        let parcel = Parcel::new(&"Welcome, enter a username below to get started!".to_string(), &self.admin);
-        let parcel_json = serde_json::to_string(&parcel).unwrap();
-        ws_tx.send(Message::text(parcel_json)).await.unwrap();
-        if let Some(response) = ws_rx.next().await {
-            username = match response {
-                Ok(name) => {
-                    let name = name.to_str().unwrap_or("anon").to_string();
-                    if name.len() == 0 {
-                        "anon".to_string()
-                    } else {
-                        name
-                    }
-                }
-                Err(e) => {
-                    eprintln!("websocket error: {}", e);
-                    return
-                }
-            };
-        } else {
-            return
-        }
-
-        let user = User::new(&username);
 
         let msg: String;
         {

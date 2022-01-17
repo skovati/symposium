@@ -29,3 +29,10 @@ async function postUserForm(url, data) {
     });
     return resp;
 }
+
+function keyPressed(event) {
+    // if enter is pressed
+    if (event.keyCode == 13) {
+        checkUsername();
+    }
+}

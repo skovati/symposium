@@ -7,14 +7,15 @@
     </head>
     <body>
         <h1>symposium</h1>
-        <div class="status-header" id="login-header">
-            <h2><em>Enter a username!</em></h2>
-        </div>
-        <div class=message-form>
-            <input type="text" placeholder="message..." class="input-text" id="username-input"/>
-            <span>
+        <div class="username-div">
+            <div class="login-header" id="login-header">
+                <h2><em>Enter a username!</em></h2>
+            </div>
+            <div class=username-form>
+                <input type="text" placeholder="username..." class="input-text" id="username-input" onkeypress="keyPressed(event)"/>
                 <button type="button" class="input-button" onclick="checkUsername()" id="username-button">send</button>
-            </span>
+                </span>
+            </div>
         </div>
         <script type="text/javascript" src="login.js"> </script>
     </body>

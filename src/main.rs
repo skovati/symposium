@@ -19,6 +19,6 @@ async fn main() {
     };
 
     // create and run router
-    let router = Router::new(socket);
+    let router = Router::new(socket).await;
     router.run().await;
 }

@@ -130,9 +130,9 @@ impl Router {
 
         println!("server started at: {}", self.addr);
         warp::serve(routes)
-            .tls()
-            .cert_path("test_tls/cert.pem")
-            .key_path("test_tls/key.rsa")
+            // .tls()
+            // .cert_path("test_tls/cert.pem")
+            // .key_path("test_tls/key.rsa")
             .run(self.addr).await;
     }
 

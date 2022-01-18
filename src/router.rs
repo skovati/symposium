@@ -162,6 +162,7 @@ impl Router {
 
         // Stream closed up, so remove from the user list
         self.users.lock().await.remove(&name);
+        self.ids.lock().await.remove(&name);
     }
 
     async fn handle_user(self, ws: WebSocket, user: User) {
@@ -214,12 +215,11 @@ impl Router {
                     break;
                 }
             };
-            let str: String = if msg.is_text() {
-                msg.to_str().unwrap().to_string()
-            } else {
-                "error".to_string()
-            };
-            self.broadcast(&str, &user).await;
+            // only broadcast text messages
+            if msg.is_text() {
+                let str = msg.to_str().unwrap().to_string();
+                self.broadcast(&str, &user).await;
+            }
         }
 
         // the while loop will continue as long as the websocket is open

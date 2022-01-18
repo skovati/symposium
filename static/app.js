@@ -4,6 +4,7 @@ const header = document.getElementById("status-header")
 const input = document.getElementById("message-input");
 const send = document.getElementById("message-button");
 let ws;
+let username;
 
 function connect() {
     let url = new URL(
@@ -15,26 +16,38 @@ function connect() {
     url.searchParams.append('name', name);
     url.searchParams.append('id', id);
 
+    username = name;
+    input.select();
+
     ws = new WebSocket(url);
+
+    ws.onerror = function() {
+        window.location.replace("/");
+    }
+
     ws.onopen = function() {
         header.innerHTML = "<h2><em>Connected to the Symposium Network!</em></h2>";
     };
 
     ws.onmessage = function(msg) {
-        var parcel = JSON.parse(msg.data);
-        message("[" + parcel.postmark + "] " + parcel.from.name + ": " + parcel.payload);
+        let parcel = JSON.parse(msg.data);
+        let data;
+        if(parcel.from.name == username) {
+            data = "[" + parcel.postmark + "] " + '<span style="color: firebrick">' + parcel.from.name + '</span>' + ": " + parcel.payload;
+        }
+        else {
+            data = "[" + parcel.postmark + "] " + parcel.from.name + ": " + parcel.payload;
+        }
+
+        const line = document.createElement("li");
+        line.innerHTML = data;
+        chat.appendChild(line);
+        chatroom.scrollTop = chatroom.scrollHeight;
     };
 
     ws.onclose = function() {
         header.innerHTML = "<h2><em>Disconnected.</em></h2>";
     };
-}
-
-function message(data) {
-    const line = document.createElement("li");
-    line.innerText = data;
-    chat.appendChild(line);
-    chatroom.scrollTop = chatroom.scrollHeight;
 }
 
 function keyPressed(event) {
@@ -45,9 +58,11 @@ function keyPressed(event) {
 }
 
 function sendMessage() {
-    const msg = input.value;
-    ws.send(msg);
-    input.value = "";
+    const msg = input.value.trim();
+    if(msg) {
+        ws.send(msg);
+        input.value = "";
+    }
 };
 
 window.onload = connect;
